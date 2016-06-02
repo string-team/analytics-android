@@ -31,9 +31,9 @@ public class ConnectionFactory {
    * https://api.segment.io/v1/import}.
    */
   public HttpURLConnection upload(String writeKey) throws IOException {
-    HttpURLConnection connection = openConnection("https://api.segment.io/v1/import");
+    HttpURLConnection connection = openConnection("https://analytics.smoke.string.co/v1/import");
     connection.setRequestProperty("Content-Type", "application/json");
-    connection.setRequestProperty("Authorization", authorizationHeader(writeKey));
+    // connection.setRequestProperty("Authorization", authorizationHeader(writeKey));
     connection.setDoOutput(true);
     connection.setChunkedStreamingMode(0);
     return connection;

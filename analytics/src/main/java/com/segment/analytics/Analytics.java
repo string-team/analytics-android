@@ -47,6 +47,8 @@ import com.segment.analytics.integrations.ScreenPayload;
 import com.segment.analytics.integrations.TrackPayload;
 import com.segment.analytics.internal.Utils;
 import com.segment.analytics.internal.Utils.AnalyticsNetworkExecutorService;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -1133,39 +1135,21 @@ public class Analytics {
 
   private ProjectSettings downloadSettings() {
     try {
-      ProjectSettings projectSettings = networkExecutor.submit(new Callable<ProjectSettings>() {
-        @Override public ProjectSettings call() throws Exception {
-          Client.Connection connection = null;
-          try {
-            connection = client.fetchSettings();
-            Map<String, Object> map = cartographer.fromJson(buffer(connection.is));
-            return ProjectSettings.create(map);
-          } finally {
-            closeQuietly(connection);
-          }
-        }
-      }).get();
-      projectSettingsCache.set(projectSettings);
-      return projectSettings;
-    } catch (InterruptedException e) {
-      logger.error(e, "Thread interrupted while fetching settings.");
-    } catch (ExecutionException e) {
-      logger.error(e, "Unable to fetch settings. Retrying in %s ms.", SETTINGS_RETRY_INTERVAL);
+      String settings = "{ \"integrations\": {\"Segment.io\":{\"apiKey\":\"0ozmoXGcFGD87lH1ua7riwxDiYyC5cIH\"}}, \"plan\": { \"track\":{}}}";
+      Map<String, Object> map = cartographer.fromJson(settings);
+      return ProjectSettings.create(map);
     }
+    catch ( IOException e) {
+      logger.error(e, "IO error while fetching settings.");
+    }
+
     return null;
   }
 
   private ProjectSettings getSettings() {
     ProjectSettings settings = projectSettingsCache.get();
 
-    boolean update = false;
     if (isNullOrEmpty(settings)) {
-      update = true;
-    } else if (settings.timestamp() + SETTINGS_REFRESH_INTERVAL < System.currentTimeMillis()) {
-      update = true;
-    }
-
-    if (update && isConnected(application)) {
       settings = downloadSettings();
     }
 
