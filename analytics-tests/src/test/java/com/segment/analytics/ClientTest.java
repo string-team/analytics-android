@@ -1,6 +1,5 @@
 package com.segment.analytics;
 
-import android.app.Activity;
 import android.net.Uri;
 import com.segment.analytics.core.tests.BuildConfig;
 import com.squareup.okhttp.mockwebserver.MockResponse;
@@ -10,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import org.assertj.core.api.AbstractAssert;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -17,8 +17,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.robolectric.Robolectric;
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import static junit.framework.Assert.fail;
@@ -26,9 +25,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.robolectric.annotation.Config.NONE;
 
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 18, manifest = Config.NONE)
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 18, manifest = NONE)
 public class ClientTest {
 
   @Rule public MockWebServerRule server = new MockWebServerRule();
@@ -36,20 +36,20 @@ public class ClientTest {
 
   private Client client;
   private Client mockClient;
-  private HttpURLConnection mockConnection;
+  HttpURLConnection mockConnection;
 
   @Before public void setUp() {
-    Activity activity = Robolectric.buildActivity(Activity.class).get();
     mockConnection = mock(HttpURLConnection.class);
 
-    client = new Client(activity, "foo", new ConnectionFactory() {
+    client = new Client("foo", new ConnectionFactory() {
       @Override protected HttpURLConnection openConnection(String url) throws IOException {
         String path = Uri.parse(url).getPath();
-        return (HttpURLConnection) server.getUrl(path).openConnection();
+        URL mockServerURL = server.getUrl(path);
+        return super.openConnection(mockServerURL.toString());
       }
     });
 
-    mockClient = new Client(activity, "foo", new ConnectionFactory() {
+    mockClient = new Client("foo", new ConnectionFactory() {
       @Override protected HttpURLConnection openConnection(String url) throws IOException {
         return mockConnection;
       }
@@ -66,6 +66,7 @@ public class ClientTest {
     RecordedRequestAssert.assertThat(server.takeRequest())
         .hasRequestLine("POST /v1/import HTTP/1.1")
         .containsHeader("Content-Type", "application/json")
+        .containsHeader("Content-Encoding", "gzip")
         .containsHeader("Authorization", "Basic Zm9vOg==");
   }
 
@@ -112,7 +113,7 @@ public class ClientTest {
     try {
       connection.close();
       fail(">= 300 return code should throw an exception");
-    } catch (Client.UploadException e) {
+    } catch (Client.HTTPException e) {
       assertThat(e).hasMessage("HTTP 300: bar. "
           + "Response: Could not read response body for rejected message: "
           + "java.io.IOException: Underlying input stream returned zero bytes");

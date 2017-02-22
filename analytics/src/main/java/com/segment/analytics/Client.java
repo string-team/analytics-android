@@ -24,12 +24,13 @@
 
 package com.segment.analytics;
 
-import android.content.Context;
+import android.text.TextUtils;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.util.zip.GZIPOutputStream;
 
 import static com.segment.analytics.internal.Utils.readFully;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -39,12 +40,19 @@ import static java.net.HttpURLConnection.HTTP_OK;
  */
 class Client {
 
-  final Context context;
   final ConnectionFactory connectionFactory;
   final String writeKey;
 
   private static Connection createPostConnection(HttpURLConnection connection) throws IOException {
-    return new Connection(connection, null, connection.getOutputStream()) {
+    final OutputStream outputStream;
+    // Clients may have opted out of gzip compression via a custom connection factory.
+    String contentEncoding = connection.getRequestProperty("Content-Encoding");
+    if (TextUtils.equals("gzip", contentEncoding)) {
+      outputStream = new GZIPOutputStream(connection.getOutputStream());
+    } else {
+      outputStream = connection.getOutputStream();
+    }
+    return new Connection(connection, null, outputStream) {
       @Override public void close() throws IOException {
         try {
           int responseCode = connection.getResponseCode();
@@ -55,7 +63,7 @@ class Client {
             } catch (IOException e) {
               responseBody = "Could not read response body for rejected message: " + e.toString();
             }
-            throw new UploadException(responseCode, connection.getResponseMessage(), responseBody);
+            throw new HTTPException(responseCode, connection.getResponseMessage(), responseBody);
           }
         } finally {
           super.close();
@@ -74,14 +82,18 @@ class Client {
     };
   }
 
-  Client(Context context, String writeKey, ConnectionFactory connectionFactory) {
-    this.context = context;
+  Client(String writeKey, ConnectionFactory connectionFactory) {
     this.writeKey = writeKey;
     this.connectionFactory = connectionFactory;
   }
 
   Connection upload() throws IOException {
     HttpURLConnection connection = connectionFactory.upload(writeKey);
+    return createPostConnection(connection);
+  }
+
+  Connection attribution() throws IOException {
+    HttpURLConnection connection = connectionFactory.attribution(writeKey);
     return createPostConnection(connection);
   }
 
@@ -95,13 +107,13 @@ class Client {
     return createGetConnection(connection);
   }
 
-  /** Represents an exception during uploading events that should not be retried. */
-  static class UploadException extends IOException {
+  /** Represents an HTTP exception thrown for unexpected/non 2xx response codes. */
+  static class HTTPException extends IOException {
     final int responseCode;
     final String responseMessage;
     final String responseBody;
 
-    UploadException(int responseCode, String responseMessage, String responseBody) {
+    HTTPException(int responseCode, String responseMessage, String responseBody) {
       super("HTTP " + responseCode + ": " + responseMessage + ". Response: " + responseBody);
       this.responseCode = responseCode;
       this.responseMessage = responseMessage;
@@ -114,8 +126,7 @@ class Client {
    * InputStream} or write to the connection via {@link OutputStream}.
    */
   static abstract class Connection implements Closeable {
-
-    protected final HttpURLConnection connection;
+    final HttpURLConnection connection;
     final InputStream is;
     final OutputStream os;
 

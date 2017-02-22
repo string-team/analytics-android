@@ -9,6 +9,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Bundle;
 import com.segment.analytics.TestUtils.NoDescriptionMatcher;
 import com.segment.analytics.core.tests.BuildConfig;
 import com.segment.analytics.integrations.AliasPayload;
@@ -34,7 +35,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Spy;
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
@@ -56,13 +57,14 @@ import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 18, manifest = Config.NONE)
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 18, manifest = Config.NONE)
 public class AnalyticsTest {
   private static final String SETTINGS = "{\n"
       + "  \"integrations\": {\n"
@@ -84,6 +86,7 @@ public class AnalyticsTest {
   @Mock ProjectSettings.Cache projectSettingsCache;
   @Mock Integration integration;
   Integration.Factory factory;
+  BooleanPreference optOut;
   Application application;
   Traits traits;
   AnalyticsContext analyticsContext;
@@ -115,17 +118,22 @@ public class AnalyticsTest {
     when(projectSettingsCache.get()) //
         .thenReturn(ProjectSettings.create(Cartographer.INSTANCE.fromJson(SETTINGS)));
 
+    SharedPreferences sharedPreferences =
+        RuntimeEnvironment.application.getSharedPreferences("analytics-test-qaz", MODE_PRIVATE);
+    optOut = new BooleanPreference(sharedPreferences, "opt-out-test", false);
+
     analytics = new Analytics(application, networkExecutor, stats, traitsCache, analyticsContext,
         defaultOptions, Logger.with(NONE), "qaz", Collections.singletonList(factory), client,
         Cartographer.INSTANCE, projectSettingsCache, "foo", DEFAULT_FLUSH_QUEUE_SIZE,
-        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, false, new CountDownLatch(0), false);
+        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, false, new CountDownLatch(0), false, false,
+        optOut, Crypto.none());
 
     // Used by singleton tests.
     grantPermission(RuntimeEnvironment.application, Manifest.permission.INTERNET);
   }
 
   @After public void tearDown() {
-    RuntimeEnvironment.application.getSharedPreferences("analytics-android", MODE_PRIVATE)
+    RuntimeEnvironment.application.getSharedPreferences("analytics-android-qaz", MODE_PRIVATE)
         .edit()
         .clear()
         .commit();
@@ -258,6 +266,12 @@ public class AnalyticsTest {
         new Options().setIntegration(Options.ALL_INTEGRATIONS_KEY, false));
     analytics.alias("foo", new Options().setIntegration(Options.ALL_INTEGRATIONS_KEY, false));
 
+    verifyNoMoreInteractions(integration);
+  }
+
+  @Test public void optOutDisablesEvents() throws IOException {
+    analytics.optOut(true);
+    analytics.track("foo");
     verifyNoMoreInteractions(integration);
   }
 
@@ -568,10 +582,25 @@ public class AnalyticsTest {
     when(application.getPackageName()).thenReturn("com.foo");
     when(application.getPackageManager()).thenReturn(packageManager);
 
+    final AtomicReference<Application.ActivityLifecycleCallbacks> callback =
+        new AtomicReference<>();
+    doNothing().when(application)
+        .registerActivityLifecycleCallbacks(
+            argThat(new NoDescriptionMatcher<Application.ActivityLifecycleCallbacks>() {
+              @Override
+              protected boolean matchesSafely(Application.ActivityLifecycleCallbacks item) {
+                callback.set(item);
+                return true;
+              }
+            }));
+
     analytics = new Analytics(application, networkExecutor, stats, traitsCache, analyticsContext,
         defaultOptions, Logger.with(NONE), "qaz", Collections.singletonList(factory), client,
         Cartographer.INSTANCE, projectSettingsCache, "foo", DEFAULT_FLUSH_QUEUE_SIZE,
-        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, true, new CountDownLatch(0), false);
+        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, true, new CountDownLatch(0), false, false,
+        optOut, Crypto.none());
+
+    callback.get().onActivityCreated(null, null);
 
     verify(integration).track(argThat(new NoDescriptionMatcher<TrackPayload>() {
       @Override protected boolean matchesSafely(TrackPayload payload) {
@@ -582,11 +611,15 @@ public class AnalyticsTest {
     }));
     verify(integration).track(argThat(new NoDescriptionMatcher<TrackPayload>() {
       @Override protected boolean matchesSafely(TrackPayload payload) {
-        return payload.event().equals("Application Started") && //
+        return payload.event().equals("Application Opened") && //
             payload.properties().getString("version").equals("1.0.0") && //
             payload.properties().getInt("build", -1) == 100;
       }
     }));
+
+    callback.get().onActivityCreated(null, null);
+    verify(integration, times(2)).onActivityCreated(null, null);
+    verifyNoMoreInteractions(integration);
   }
 
   @Test public void trackApplicationLifecycleEventsUpdated() throws NameNotFoundException {
@@ -597,7 +630,7 @@ public class AnalyticsTest {
     packageInfo.versionName = "1.0.1";
 
     SharedPreferences sharedPreferences =
-        RuntimeEnvironment.application.getSharedPreferences("analytics-android", MODE_PRIVATE);
+        RuntimeEnvironment.application.getSharedPreferences("analytics-android-qaz", MODE_PRIVATE);
     SharedPreferences.Editor editor = sharedPreferences.edit();
     editor.putInt("build", 100);
     editor.putString("version", "1.0.0");
@@ -608,10 +641,25 @@ public class AnalyticsTest {
     when(application.getPackageName()).thenReturn("com.foo");
     when(application.getPackageManager()).thenReturn(packageManager);
 
+    final AtomicReference<Application.ActivityLifecycleCallbacks> callback =
+        new AtomicReference<>();
+    doNothing().when(application)
+        .registerActivityLifecycleCallbacks(
+            argThat(new NoDescriptionMatcher<Application.ActivityLifecycleCallbacks>() {
+              @Override
+              protected boolean matchesSafely(Application.ActivityLifecycleCallbacks item) {
+                callback.set(item);
+                return true;
+              }
+            }));
+
     analytics = new Analytics(application, networkExecutor, stats, traitsCache, analyticsContext,
         defaultOptions, Logger.with(NONE), "qaz", Collections.singletonList(factory), client,
         Cartographer.INSTANCE, projectSettingsCache, "foo", DEFAULT_FLUSH_QUEUE_SIZE,
-        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, true, new CountDownLatch(0), false);
+        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, true, new CountDownLatch(0), false, false,
+        optOut, Crypto.none());
+
+    callback.get().onActivityCreated(null, null);
 
     verify(integration).track(argThat(new NoDescriptionMatcher<TrackPayload>() {
       @Override protected boolean matchesSafely(TrackPayload payload) {
@@ -624,7 +672,7 @@ public class AnalyticsTest {
     }));
     verify(integration).track(argThat(new NoDescriptionMatcher<TrackPayload>() {
       @Override protected boolean matchesSafely(TrackPayload payload) {
-        return payload.event().equals("Application Started") && //
+        return payload.event().equals("Application Opened") && //
             payload.properties().getString("version").equals("1.0.1") && //
             payload.properties().getInt("build", -1) == 101;
       }
@@ -649,7 +697,8 @@ public class AnalyticsTest {
     analytics = new Analytics(application, networkExecutor, stats, traitsCache, analyticsContext,
         defaultOptions, Logger.with(NONE), "qaz", Collections.singletonList(factory), client,
         Cartographer.INSTANCE, projectSettingsCache, "foo", DEFAULT_FLUSH_QUEUE_SIZE,
-        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, false, new CountDownLatch(0), true);
+        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, false, new CountDownLatch(0), true, false,
+        optOut, Crypto.none());
 
     Activity activity = mock(Activity.class);
     PackageManager packageManager = mock(PackageManager.class);
@@ -668,5 +717,53 @@ public class AnalyticsTest {
         return payload.name().equals("Foo");
       }
     }));
+  }
+
+  @Test public void registerActivityLifecycleCallbacks() throws NameNotFoundException {
+    Analytics.INSTANCES.clear();
+
+    final AtomicReference<Application.ActivityLifecycleCallbacks> callback =
+        new AtomicReference<>();
+    doNothing().when(application)
+        .registerActivityLifecycleCallbacks(
+            argThat(new NoDescriptionMatcher<Application.ActivityLifecycleCallbacks>() {
+              @Override
+              protected boolean matchesSafely(Application.ActivityLifecycleCallbacks item) {
+                callback.set(item);
+                return true;
+              }
+            }));
+
+    analytics = new Analytics(application, networkExecutor, stats, traitsCache, analyticsContext,
+        defaultOptions, Logger.with(NONE), "qaz", Collections.singletonList(factory), client,
+        Cartographer.INSTANCE, projectSettingsCache, "foo", DEFAULT_FLUSH_QUEUE_SIZE,
+        DEFAULT_FLUSH_INTERVAL, analyticsExecutor, false, new CountDownLatch(0), false, false,
+        optOut, Crypto.none());
+
+    Activity activity = mock(Activity.class);
+    Bundle bundle = new Bundle();
+
+    callback.get().onActivityCreated(activity, bundle);
+    verify(integration).onActivityCreated(activity, bundle);
+
+    callback.get().onActivityStarted(activity);
+    verify(integration).onActivityStarted(activity);
+
+    callback.get().onActivityResumed(activity);
+    verify(integration).onActivityResumed(activity);
+
+    callback.get().onActivityPaused(activity);
+    verify(integration).onActivityPaused(activity);
+
+    callback.get().onActivityStopped(activity);
+    verify(integration).onActivityStopped(activity);
+
+    callback.get().onActivitySaveInstanceState(activity, bundle);
+    verify(integration).onActivitySaveInstanceState(activity, bundle);
+
+    callback.get().onActivityDestroyed(activity);
+    verify(integration).onActivityDestroyed(activity);
+
+    verifyNoMoreInteractions(integration);
   }
 }

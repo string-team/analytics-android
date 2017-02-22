@@ -1,3 +1,83 @@
+Changelog
+=========
+
+Version 4.2.6 (January 31st, 2017)
+==================================
+ * [Fix](https://github.com/segmentio/analytics-android/pull/495): Update Cartographer. This fixes an issue where sending custom values sent as arrays would not be serialized correctly.
+ * [Fix](https://github.com/segmentio/analytics-android/pull/494): Make DateFormat access thread safe. This fixes an issue where generated timestamps could be sometimes be malformed and not conform to the ISO 8601 standard.
+
+
+Version 4.2.5 (January 2nd, 2017)
+==================================
+ * [Fix](https://github.com/segmentio/analytics-android/pull/487/commits/8649050b4b7b74be17fc7b7e4ec0add7362325fd): Using `Properties#putProducts` was stored as an array instead of a list, and not serialized correctly. This caused it to be usable by Segment and server side integrations. If you're stuck on a previous version for some reason, you can manually store it as a list:
+
+ ```java
+ List<Product> products = new ArrayList<>();
+ products.add(new Product("foo", "bar", 10));
+ // add other products to this list.
+
+ Properties properties = new Properties();
+ properties.put("products", products);
+ ```
+
+
+Version 4.2.4 (November 14th, 2016)
+==================================
+ * [Fix](https://github.com/segmentio/analytics-android/pull/484): Version 4.2.2 introduced a change where a default application wide cache was being installed for HTTPURLConnection requests. If you were not using an HTTP cache already or relying on this behaviour, this may have resulted in unintended caching behaviour for your application. This fix returns to the behaviour before 4.2.2, where this library does not install a cache. You may continue to choose to install an application level cache for HTTPURLConnection if you wish.
+
+
+Version 4.2.3 (November 4th, 2016)
+==================================
+ * [Improvement]: Update CDN hostname from `cdn.segment.com` to `cdn-settings.segment.com`. This endpoint has been added to improve performance for mobile clients.
+
+
+Version 4.2.2 (October 13th, 2016)
+====================================
+
+  * [Fix](https://github.com/segmentio/analytics-android/pull/479): Rely on HTTP cache for caching settings responses. This fixes a regression introduced in [version 4.1.4](https://github.com/segmentio/analytics-android/pull/448), where cached settings responses were not being used, and would always be fetched from the network.
+
+
+Version 4.2.1 (October 7th, 2016)
+====================================
+
+  * [Fix](https://github.com/segmentio/analytics-android/pull/476): Use Application Opened instead of Application Started.
+  * [Improvement](https://github.com/segmentio/analytics-android/pull/475): Update Google Play Services for Android wear module.
+
+Version 4.2.0 (September 19th, 2016)
+====================================
+
+  * [Improvement](https://github.com/segmentio/analytics-android/pull/464): Reduce synthetic accessor methods.
+  * [Fix](https://github.com/segmentio/analytics-android/pull/466): Handle `null` values in maps.
+  * [New](https://github.com/segmentio/analytics-android/pull/467): Add the ability for the SDK to natively report attribution information via Segment integrations enabled for your project, without needing to bundle their SDKs. Attribution information is sent as a track call as documented in the [mobile lifecycle spec](https://segment.com/docs/spec/mobile/#install-attributed).
+
+```java
+Analytics analytics = new Analytics.Builder(context, writeKey)
+    .trackAttributionInformation()
+    .build();
+```
+
+Version 4.1.6 (August 9th, 2016)
+================================
+
+  * Improvement: Add more logging when collecting advertising ID.
+
+Version 4.1.5 (July 10th, 2016)
+===============================
+
+  * Improvement: Add more protection against growing disk queue to over 2GB.
+
+Version 4.1.4 (Jun 6th, 2016)
+=============================
+
+  * New: Add opt out method in the library. This will stop sending any events to all integrations for the device.
+
+```java
+analytics.optOut(true);
+```
+
+  * Fix: Use Application Opened instead of Application Started.
+  * Improvement: gzip HTTP request body.
+  * Fix: Guard against possible ArrayIndexOutOfBoundsException.
 
 Version 4.1.3 (May 31st, 2016)
 ==============================

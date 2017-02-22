@@ -1,9 +1,10 @@
 buildscript {
   repositories {
     mavenCentral()
+    jcenter()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:2.1.0'
+    classpath 'com.android.tools.build:gradle:2.2.3'
     classpath 'com.f2prateek.checkstyle:checkstyle:1.0.1'
   }
 }
@@ -12,6 +13,7 @@ allprojects {
   buildscript {
     repositories {
       mavenCentral()
+      jcenter()
     }
   }
 
@@ -32,11 +34,11 @@ ext {
   versionCode = Integer.parseInt(VERSION_CODE)
   versionName = VERSION_NAME
 
-  minSdkVersion = 16
+  minSdkVersion = 14
   minSdkVersionWear = 21
   targetSdkVersion = 23
   compileSdkVersion = 23
-  buildToolsVersion = '23.0.3'
+  buildToolsVersion = '23.0.1'
 
   sourceCompatibilityVersion = JavaVersion.VERSION_1_7
   targetCompatibilityVersion = JavaVersion.VERSION_1_7

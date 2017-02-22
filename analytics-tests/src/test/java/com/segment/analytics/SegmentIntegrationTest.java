@@ -24,7 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLog;
 
@@ -48,13 +48,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 18, manifest = Config.NONE)
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 18, manifest = Config.NONE)
 public class SegmentIntegrationTest {
 
   @Rule public TemporaryFolder folder = new TemporaryFolder();
@@ -87,6 +86,7 @@ public class SegmentIntegrationTest {
   @Test public void enqueueWritesIntegrations() throws IOException {
     final HashMap<String, Boolean> integrations = new LinkedHashMap<>();
     integrations.put("All", false); // should overwrite existing values in the map.
+    integrations.put("Segment.io", false); // should ignore Segment setting in payload.
     integrations.put("foo", true); // should add new values.
     PayloadQueue payloadQueue = mock(PayloadQueue.class);
     SegmentIntegration segmentIntegration = new SegmentBuilder() //
@@ -230,7 +230,9 @@ public class SegmentIntegrationTest {
     Client.Connection connection = mockConnection(urlConnection);
     when(client.upload()).thenReturn(connection);
     SegmentIntegration segmentIntegration = new SegmentBuilder() //
-        .client(client).payloadQueue(payloadQueue).build();
+        .client(client) //
+        .payloadQueue(payloadQueue) //
+        .build();
 
     segmentIntegration.submitFlush();
 
@@ -280,7 +282,8 @@ public class SegmentIntegrationTest {
 
   @Test public void payloadVisitorReadsOnly475KB() throws IOException {
     SegmentIntegration.PayloadWriter payloadWriter =
-        new SegmentIntegration.PayloadWriter(mock(SegmentIntegration.BatchPayloadWriter.class));
+        new SegmentIntegration.PayloadWriter(mock(SegmentIntegration.BatchPayloadWriter.class),
+            Crypto.none());
     byte[] bytes = ("{\n"
         + "        'context': {\n"
         + "          'library': 'analytics-android',\n"
@@ -431,7 +434,7 @@ public class SegmentIntegrationTest {
       if (integrations == null) integrations = Collections.emptyMap();
       if (networkExecutor == null) networkExecutor = new SynchronousExecutor();
       return new SegmentIntegration(context, client, cartographer, networkExecutor, payloadQueue,
-          stats, integrations, flushInterval, flushSize, logger);
+          stats, integrations, flushInterval, flushSize, logger, Crypto.none());
     }
   }
 }

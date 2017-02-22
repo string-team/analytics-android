@@ -24,7 +24,6 @@
 
 package com.segment.analytics.internal;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
@@ -79,8 +78,12 @@ public final class Utils {
   public static final int DEFAULT_FLUSH_INTERVAL = 30 * 1000; // 30s
   public static final int DEFAULT_FLUSH_QUEUE_SIZE = 20;
   public static final boolean DEFAULT_COLLECT_DEVICE_ID = true;
-  @SuppressLint("SimpleDateFormat") private static final DateFormat ISO_8601_DATE_FORMAT =
-      new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US);
+  private static final ThreadLocal<DateFormat> ISO_8601_DATE_FORMAT =
+      new ThreadLocal<DateFormat>() {
+        @Override protected DateFormat initialValue() {
+          return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US);
+        }
+      };
 
   /** Creates a mutable HashSet instance containing the given elements in unspecified order */
   public static <T> Set<T> newSet(T... values) {
@@ -91,12 +94,12 @@ public final class Utils {
 
   /** Returns the date as a string formatted with {@link #ISO_8601_DATE_FORMAT}. */
   public static String toISO8601Date(Date date) {
-    return ISO_8601_DATE_FORMAT.format(date);
+    return ISO_8601_DATE_FORMAT.get().format(date);
   }
 
   /** Returns the string as a date parsed with {@link #ISO_8601_DATE_FORMAT}. */
   public static Date toISO8601Date(String date) throws ParseException {
-    return ISO_8601_DATE_FORMAT.parse(date);
+    return ISO_8601_DATE_FORMAT.get().parse(date);
   }
 
   //TODO: Migrate other coercion methods.
@@ -142,9 +145,14 @@ public final class Utils {
     return TextUtils.isEmpty(text) || TextUtils.getTrimmedLength(text) == 0;
   }
 
-  /** Returns true if the collection or has a size 0. */
+  /** Returns true if the collection is null or has a size of 0. */
   public static boolean isNullOrEmpty(Collection collection) {
     return collection == null || collection.size() == 0;
+  }
+
+  /** Returns true if the array is null or has a size of 0. */
+  public static <T> boolean isNullOrEmpty(T[] data) {
+    return data == null || data.length == 0;
   }
 
   /** Returns true if the map is null or empty, false otherwise. */
@@ -179,8 +187,8 @@ public final class Utils {
   }
 
   /** Returns a shared preferences for storing any library preferences. */
-  public static SharedPreferences getSegmentSharedPreferences(Context context) {
-    return context.getSharedPreferences("analytics-android", MODE_PRIVATE);
+  public static SharedPreferences getSegmentSharedPreferences(Context context, String tag) {
+    return context.getSharedPreferences("analytics-android-" + tag, MODE_PRIVATE);
   }
 
   /** Get the string resource for the given key. Returns null if not found. */
@@ -369,6 +377,29 @@ public final class Utils {
     }
   }
 
+  /** Copies all the values from {@code src} to {@code target}. */
+  public static void copySharedPreferences(SharedPreferences src, SharedPreferences target) {
+    SharedPreferences.Editor editor = target.edit();
+    for (Map.Entry<String, ?> entry : src.getAll().entrySet()) {
+      String key = entry.getKey();
+      Object value = entry.getValue();
+      if (value instanceof String) {
+        editor.putString(key, (String) value);
+      } else if (value instanceof Set) {
+        editor.putStringSet(key, (Set<String>) value);
+      } else if (value instanceof Integer) {
+        editor.putInt(key, (Integer) value);
+      } else if (value instanceof Long) {
+        editor.putLong(key, (Long) value);
+      } else if (value instanceof Float) {
+        editor.putFloat(key, (Float) value);
+      } else if (value instanceof Boolean) {
+        editor.putBoolean(key, (Boolean) value);
+      }
+    }
+    editor.apply();
+  }
+
   private Utils() {
     throw new AssertionError("No instances");
   }
@@ -425,6 +456,12 @@ public final class Utils {
         return null;
       }
       return super.put(key, value);
+    }
+
+    @Override public void putAll(Map<? extends K, ? extends V> m) {
+      for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
+        put(e.getKey(), e.getValue());
+      }
     }
   }
 }

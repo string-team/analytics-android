@@ -15,7 +15,9 @@
  */
 package com.segment.analytics;
 
+import com.segment.analytics.internal.Private;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -203,7 +205,7 @@ public class QueueFile implements Closeable {
   }
 
   /** Wraps the position if it exceeds the end of the file. */
-  private int wrapPosition(int position) {
+  @Private int wrapPosition(int position) {
     return position < fileLength ? position : HEADER_LENGTH + position - fileLength;
   }
 
@@ -247,7 +249,7 @@ public class QueueFile implements Closeable {
    * @param buffer to read into
    * @param count # of bytes to read
    */
-  private void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
+  @Private void ringRead(int position, byte[] buffer, int offset, int count) throws IOException {
     position = wrapPosition(position);
     if (position + count <= fileLength) {
       raf.seek(position);
@@ -354,6 +356,9 @@ public class QueueFile implements Closeable {
     do {
       remainingBytes += previousLength;
       newLength = previousLength << 1;
+      if (newLength < previousLength) {
+        throw new EOFException("Cannot grow file beyond " + previousLength + " bytes");
+      }
       previousLength = newLength;
     } while (remainingBytes < elementLength);
 
@@ -422,11 +427,11 @@ public class QueueFile implements Closeable {
     return elementCount;
   }
 
-  private final class ElementInputStream extends InputStream {
+  @Private final class ElementInputStream extends InputStream {
     private int position;
     private int remaining;
 
-    private ElementInputStream(Element element) {
+    @Private ElementInputStream(Element element) {
       position = wrapPosition(element.position + Element.HEADER_LENGTH);
       remaining = element.length;
     }

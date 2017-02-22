@@ -35,6 +35,8 @@ import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.WindowManager;
 import com.segment.analytics.core.BuildConfig;
+import com.segment.analytics.integrations.Logger;
+import com.segment.analytics.internal.Private;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -147,13 +149,16 @@ public class AnalyticsContext extends ValueMap {
     super(delegate);
   }
 
-  void attachAdvertisingId(Context context, CountDownLatch latch) {
+  void attachAdvertisingId(Context context, CountDownLatch latch, Logger logger) {
     // This is done as an extra step so we don't run into errors like this for testing
-    // http://pastebin.com/gyWJKWiu
+    // http://pastebin.com/gyWJKWiu.
     if (isOnClassPath("com.google.android.gms.ads.identifier.AdvertisingIdClient")) {
-      // this needs to be done each time since the settings may have been updated
-      new GetAdvertisingIdTask(this, latch).execute(context);
+      // This needs to be done each time since the settings may have been updated.
+      new GetAdvertisingIdTask(this, latch, logger).execute(context);
     } else {
+      logger.debug("Not collecting advertising ID because "
+          + "com.google.android.gms.ads.identifier.AdvertisingIdClient "
+          + "was not found on the classpath.");
       latch.countDown();
     }
   }
@@ -390,15 +395,15 @@ public class AnalyticsContext extends ValueMap {
   /** Information about the device. */
   public static class Device extends ValueMap {
 
-    private static final String DEVICE_ID_KEY = "id";
-    private static final String DEVICE_MANUFACTURER_KEY = "manufacturer";
-    private static final String DEVICE_MODEL_KEY = "model";
-    private static final String DEVICE_NAME_KEY = "name";
-    private static final String DEVICE_TOKEN_KEY = "token";
-    private static final String DEVICE_ADVERTISING_ID_KEY = "advertisingId";
-    private static final String DEVICE_AD_TRACKING_ENABLED_KEY = "adTrackingEnabled";
+    @Private static final String DEVICE_ID_KEY = "id";
+    @Private static final String DEVICE_MANUFACTURER_KEY = "manufacturer";
+    @Private static final String DEVICE_MODEL_KEY = "model";
+    @Private static final String DEVICE_NAME_KEY = "name";
+    @Private static final String DEVICE_TOKEN_KEY = "token";
+    @Private static final String DEVICE_ADVERTISING_ID_KEY = "advertisingId";
+    @Private static final String DEVICE_AD_TRACKING_ENABLED_KEY = "adTrackingEnabled";
 
-    private Device() {
+    @Private Device() {
     }
 
     // For deserialization
