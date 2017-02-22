@@ -28,8 +28,8 @@ public class ConnectionFactory {
    * https://api.segment.io/v1/import}.
    */
   public HttpURLConnection upload(String writeKey) throws IOException {
-    HttpURLConnection connection = openConnection("https://api.segment.io/v1/import");
-    connection.setRequestProperty("Authorization", authorizationHeader(writeKey));
+    HttpURLConnection connection = openConnection("https://b7arwm5kd5.execute-api.eu-west-1.amazonaws.com/dev/logger");
+    //connection.setRequestProperty("Authorization", authorizationHeader(writeKey));
     connection.setRequestProperty("Content-Encoding", "gzip");
     connection.setDoOutput(true);
     connection.setChunkedStreamingMode(0);

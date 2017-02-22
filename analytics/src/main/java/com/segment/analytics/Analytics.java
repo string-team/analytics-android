@@ -544,6 +544,7 @@ public class Analytics {
    */
   public void track(String event, Properties properties) {
     track(event, properties, null);
+    logger.info("Segment receives data");
   }
 
   /**
@@ -1235,24 +1236,11 @@ public class Analytics {
 
   private ProjectSettings downloadSettings() {
     try {
-      ProjectSettings projectSettings = networkExecutor.submit(new Callable<ProjectSettings>() {
-        @Override public ProjectSettings call() throws Exception {
-          Client.Connection connection = null;
-          try {
-            connection = client.fetchSettings();
-            Map<String, Object> map = cartographer.fromJson(buffer(connection.is));
-            return ProjectSettings.create(map);
-          } finally {
-            closeQuietly(connection);
-          }
-        }
-      }).get();
-      projectSettingsCache.set(projectSettings);
-      return projectSettings;
-    } catch (InterruptedException e) {
-      logger.error(e, "Thread interrupted while fetching settings.");
-    } catch (ExecutionException e) {
-      logger.error(e, "Unable to fetch settings. Retrying in %s ms.", SETTINGS_RETRY_INTERVAL);
+      String settings = "{ \"integrations\": {\"Segment.io\":{\"apiKey\":\"0ozmoXGcFGD87lH1ua7riwxDiYyC5cIH\"}}, \"plan\": { \"track\":{}}}";
+      Map<String, Object> map = cartographer.fromJson(settings);
+      return ProjectSettings.create(map);
+    } catch (IOException e) {
+      logger.error(e, "IO error while fetching settings.");
     }
     return null;
   }
@@ -1268,17 +1256,7 @@ public class Analytics {
     if (isNullOrEmpty(cachedSettings)) {
       return downloadSettings();
     }
-
-    long expirationTime = cachedSettings.timestamp() + SETTINGS_REFRESH_INTERVAL;
-    if (expirationTime > System.currentTimeMillis()) {
-      return cachedSettings;
-    }
-
-    ProjectSettings downloadedSettings = downloadSettings();
-    if (isNullOrEmpty(downloadedSettings)) {
-      return cachedSettings;
-    }
-    return downloadedSettings;
+    return cachedSettings;
   }
 
   void performInitializeIntegrations(ProjectSettings projectSettings) {
