@@ -155,7 +155,7 @@ public class Analytics {
       }
       synchronized (Analytics.class) {
         if (singleton == null) {
-          String writeKey = getResourceString(context, WRITE_KEY_RESOURCE_IDENTIFIER);
+          String writeKey = "noKey"; //getResourceString(context, WRITE_KEY_RESOURCE_IDENTIFIER);
           Builder builder = new Builder(context, writeKey);
 
           try {
@@ -544,7 +544,7 @@ public class Analytics {
    */
   public void track(String event, Properties properties) {
     track(event, properties, null);
-    logger.info("Segment receives data");
+    //logger.info("Segment receives data");
   }
 
   /**
