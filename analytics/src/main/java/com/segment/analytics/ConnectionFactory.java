@@ -1,6 +1,7 @@
 package com.segment.analytics;
 
 import android.util.Base64;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -28,7 +29,8 @@ public class ConnectionFactory {
    * https://api.segment.io/v1/import}.
    */
   public HttpURLConnection upload(String writeKey) throws IOException {
-    HttpURLConnection connection = openConnection("https://b7arwm5kd5.execute-api.eu-west-1.amazonaws.com/dev/logger");
+    String connectionURL = Analytics.endpointURL;
+    HttpURLConnection connection = openConnection(connectionURL);
     //connection.setRequestProperty("Authorization", authorizationHeader(writeKey));
     connection.setRequestProperty("Content-Encoding", "gzip");
     connection.setDoOutput(true);

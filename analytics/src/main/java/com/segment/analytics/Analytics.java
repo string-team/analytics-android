@@ -37,6 +37,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+
 import com.segment.analytics.integrations.AliasPayload;
 import com.segment.analytics.integrations.BasePayload;
 import com.segment.analytics.integrations.GroupPayload;
@@ -87,7 +88,7 @@ import static com.segment.analytics.internal.Utils.isNullOrEmpty;
  * new tools.
  * <p/>
  * This class is the main entry point into the client API. Use {@link
- * #with(android.content.Context)} for the global singleton instance or construct your own instance
+ * #with(android.content.Context, String)} for the global singleton instance or construct your own instance
  * with {@link Builder}.
  *
  * @see <a href="https://Segment/">Segment</a>
@@ -106,6 +107,7 @@ public class Analytics {
   private static final String VERSION_KEY = "version";
   private static final String BUILD_KEY = "build";
   private static final String TRACKED_ATTRIBUTION_KEY = "tracked_attribution";
+  protected static String endpointURL;
 
   private final Application application;
   final ExecutorService networkExecutor;
@@ -148,7 +150,7 @@ public class Analytics {
    * By default, events are uploaded every 30 seconds, or every 20 events (whichever occurs first),
    * and debugging is disabled.
    */
-  public static Analytics with(Context context) {
+  public static Analytics with(Context context, String endpointFromStage) {
     if (singleton == null) {
       if (context == null) {
         throw new IllegalArgumentException("Context must not be null.");
@@ -169,6 +171,7 @@ public class Analytics {
           }
 
           singleton = builder.build();
+          endpointURL = endpointFromStage;
         }
       }
     }
@@ -544,7 +547,6 @@ public class Analytics {
    */
   public void track(String event, Properties properties) {
     track(event, properties, null);
-    //logger.info("Segment receives data");
   }
 
   /**
