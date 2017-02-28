@@ -157,7 +157,7 @@ public class Analytics {
       }
       synchronized (Analytics.class) {
         if (singleton == null) {
-          String writeKey = "noKey"; //getResourceString(context, WRITE_KEY_RESOURCE_IDENTIFIER);
+          String writeKey = "9pDf5Hjmwx82UiEwxX19aPqzSZ173jVr"; //getResourceString(context, WRITE_KEY_RESOURCE_IDENTIFIER);
           Builder builder = new Builder(context, writeKey);
 
           try {
