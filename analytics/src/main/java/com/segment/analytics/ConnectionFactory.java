@@ -1,7 +1,6 @@
 package com.segment.analytics;
 
 import android.util.Base64;
-import android.util.Log;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -33,7 +32,6 @@ public class ConnectionFactory {
     String connectionURL = Analytics.endpointURL;
     HttpURLConnection connection = openConnection(connectionURL);
     connection.setRequestProperty("Authorization", authorizationHeader(writeKey));
-    Log.d("SEGMENT", authorizationHeader(writeKey));
     connection.setRequestProperty("Content-Encoding", "gzip");
     connection.setDoOutput(true);
     connection.setChunkedStreamingMode(0);
