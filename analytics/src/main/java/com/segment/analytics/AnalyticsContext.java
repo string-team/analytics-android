@@ -110,8 +110,8 @@ public class AnalyticsContext extends ValueMap {
   // Screen
   private static final String SCREEN_KEY = "screen";
   private static final String SCREEN_DENSITY_KEY = "density";
-  private static final String SCREEN_HEIGHT_KEY = "height";
-  private static final String SCREEN_WIDTH_KEY = "width";
+  private static final String SCREEN_HEIGHT_KEY = "height_pixels";
+  private static final String SCREEN_WIDTH_KEY = "width_pixels";
 
   /**
    * Create a new {@link AnalyticsContext} instance filled in with information from the given

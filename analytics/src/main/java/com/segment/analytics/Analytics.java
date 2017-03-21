@@ -465,9 +465,8 @@ public class Analytics {
         }
 
         waitForAdvertisingId();
-        IdentifyPayload payload =
-            new IdentifyPayload(analyticsContext, finalOptions, traitsCache.get());
-        enqueue(payload);
+        //IdentifyPayload payload = new IdentifyPayload(analyticsContext, finalOptions, traitsCache.get());
+        //enqueue(payload);
       }
     });
   }
