@@ -70,6 +70,6 @@ public class PhoneAnalyticsListenerService extends WearableListenerService {
   }
 
   public Analytics getAnalytics() {
-    return Analytics.with(this, "");
+    return Analytics.with(this, "", "");
   }
 }

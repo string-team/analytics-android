@@ -57,11 +57,11 @@ public class MainActivity extends Activity {
   }
 
   @OnClick(R.id.action_track_a) void onButtonAClicked() {
-    Analytics.with(this, "").track("Button A Clicked");
+    Analytics.with(this, "", "").track("Button A Clicked");
   }
 
   @OnClick(R.id.action_track_b) void onButtonBClicked() {
-    Analytics.with(this, "").track("Button B Clicked");
+    Analytics.with(this, "", "").track("Button B Clicked");
   }
 
   @OnClick(R.id.action_identify) void onIdentifyButtonClicked() {
@@ -69,12 +69,12 @@ public class MainActivity extends Activity {
     if (isNullOrEmpty(id)) {
       Toast.makeText(this, R.string.id_required, Toast.LENGTH_LONG).show();
     } else {
-      Analytics.with(this, "").identify(id);
+      Analytics.with(this, "", "").identify(id);
     }
   }
 
   @OnClick(R.id.action_flush) void onFlushButtonClicked() {
-    Analytics.with(this, "").flush();
+    Analytics.with(this, "", "").flush();
   }
 
   @Override public boolean onCreateOptionsMenu(Menu menu) {

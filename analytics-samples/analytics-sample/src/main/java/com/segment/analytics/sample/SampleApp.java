@@ -28,7 +28,7 @@ public class SampleApp extends Application {
     Analytics.setSingletonInstance(builder.build());
 
     // Now anytime you call Analytics.with, the custom instance will be returned.
-    Analytics analytics = Analytics.with(this, "");
+    Analytics analytics = Analytics.with(this, "", "");
 
     // If you need to know when integrations have been initialized, use the onIntegrationReady
     // listener.

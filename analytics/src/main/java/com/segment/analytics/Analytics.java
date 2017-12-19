@@ -150,14 +150,14 @@ public class Analytics {
    * By default, events are uploaded every 30 seconds, or every 20 events (whichever occurs first),
    * and debugging is disabled.
    */
-  public static Analytics with(Context context, String endpointFromStage) {
+  public static Analytics with(Context context, String endpointFromStage, String writeKeyFromStage) {
     if (singleton == null) {
       if (context == null) {
         throw new IllegalArgumentException("Context must not be null.");
       }
       synchronized (Analytics.class) {
         if (singleton == null) {
-          String writeKey = "9pDf5Hjmwx82UiEwxX19aPqzSZ173jVr"; //getResourceString(context, WRITE_KEY_RESOURCE_IDENTIFIER);
+          String writeKey = writeKeyFromStage; //getResourceString(context, WRITE_KEY_RESOURCE_IDENTIFIER);
           Builder builder = new Builder(context, writeKey);
 
           try {
